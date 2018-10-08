@@ -56,32 +56,44 @@ public class Main {
 		
 		
 		System.out.println("\nPress enter to continue and start the Benders Decompostion algorithm");
-		//System.in.read();
+		System.in.read();
 		
 		// Bender's Decomposition
 		MasterProblem mp = new MasterProblem(gcp);
 		boolean solved = false;
-		//while (!solved) {
+		while (!solved) {
+			mp.solve();
+			mp.print();
+			/* When constructing the Feasibility problem, I realised it's redundant 
+			 * as the shedding variable will make the second stage feasible always.
+			FeasibilityProblem fsp = new FeasibilityProblem(gcp, mp.getU());
+			fsp.solve();
+			if(fsp.getObjValue()>0) {
+				//Introduce cut and jump to top of while-loop
+			}
+			*/
 			
+			// solve Optimality Subproblem checking for optimality 
+			OptimalityProblem osp = new OptimalityProblem(gcp, mp.getU());
+			osp.solve();
+			System.out.println("printin osp value: "+osp.getObjValue());
+			System.out.println("printin phi value: "+mp.getPhi());
+			if( mp.getPhi() >= osp.getObjValue() ) {
+				// If true, then we solved the problem!
+				System.out.println("The Bender's Decomposition has converged!");
+				solved = true;
+				
+				mp.print();
+				mp.end();
+			}
+			else {
+				// Solution is not optimal and we must introduce a cut with the duals from the Optimality subproblem
+				mp.addOptimalityCut(osp.getDualsDemandConstraints(), osp.getminProConstraints(), 
+						osp.getmaxProConstraints(), osp.getRampUpConstraints(), osp.getRampDownConstraints());
+			}
+			osp.end();
 		
-		mp.solve();
-		mp.print();
-		
-		/* When constructing the Feasibility problem, I realised it's redundant 
-		 * as the shedding variable will make the second stage feasible always.
-		FeasibilityProblem fsp = new FeasibilityProblem(gcp, mp.getU());
-		fsp.solve();
-		if(fsp.getObjValue()>0) {
-			//Introduce cut and jump to top of while-loop
-		}
-		*/
-		
-		OptimalityProblem osp = new OptimalityProblem(gcp, mp.getU());
-		osp.solve();
-		
-		
-		
-		
+		}//while
 		
 	}
 

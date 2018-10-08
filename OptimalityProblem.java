@@ -58,16 +58,24 @@ public class OptimalityProblem {
 		this.minProConstr = new IloRange[gcp.getnGenerators()][gcp.getT()];
 		for (int t=1; t <= gcp.getT(); t++) {
 			for (int g = 1; g <= gcp.getnGenerators(); g++) {
-				minProConstr[g-1][t-1] = model.addGe(p[g-1][t-1], gcp.getMinP()[g-1]*U[g-1][t-1]);
+				IloLinearNumExpr lhs = model.linearNumExpr();
+				lhs.addTerm(1, p[g-1][t-1]);
+				lhs.setConstant(-(gcp.getMinP()[g-1])* U[g-1][t-1]);
+				minProConstr[g-1][t-1] = model.addGe(lhs, 0);
 			}
 		}
+		
 		//Constraint 1g
 		this.maxProConstr = new IloRange[gcp.getnGenerators()][gcp.getT()];
 		for (int t=1; t <= gcp.getT(); t++) {
 			for (int g = 1; g <= gcp.getnGenerators(); g++) {
-				maxProConstr[g-1][t-1] = model.addLe(p[g-1][t-1], gcp.getMaxP()[g-1]*U[g-1][t-1]);
+				IloLinearNumExpr lhs = model.linearNumExpr();
+				lhs.addTerm(1, p[g-1][t-1]);
+				lhs.setConstant(-(gcp.getMaxP()[g-1])*U[g-1][t-1]);
+				maxProConstr[g-1][t-1] = model.addLe(lhs, 0);
 			}
 		}
+		
 		//Constraint 1h Note ramping up and down times are the same
 		this.RampUpConstr = new IloRange[gcp.getnGenerators()][gcp.getT()];
 		for (int t=1; t <= gcp.getT(); t++) {
@@ -102,9 +110,8 @@ public class OptimalityProblem {
 	
 	
 	public void solve() throws IloException{
+		model.setOut(null);
         model.solve();
-        
-        System.out.println(" \n ===> Optimal objective value "+model.getObjValue()+"\n");
     }
 	
 	/**

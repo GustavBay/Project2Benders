@@ -2,7 +2,6 @@ import ilog.concert.IloException;
 import ilog.concert.IloLinearNumExpr;
 import ilog.concert.IloNumVar;
 import ilog.cplex.IloCplex;
-import ilog.cplex.IloCplex.UnknownObjectException;
 
 
 
@@ -113,9 +112,11 @@ public class MasterProblem {
 	// Utility Methods
 	/**
 	 * @return the phi
+	 * @throws IloException 
+	 * @throws  
 	 */
-	public IloNumVar getPhi() {
-		return phi;
+	public double getPhi() throws IloException {
+		return model.getValue(phi);
 	}
 	
 	/**
@@ -143,7 +144,6 @@ public class MasterProblem {
     public void solve() throws IloException{
         model.setOut(null);
         model.solve();
-        System.out.println(" \n ===> Optimal objective value "+model.getObjValue()+"\n");
     }
     
 	
@@ -163,6 +163,7 @@ public class MasterProblem {
             }
         }
         System.out.println("Production Cost Phi = "+model.getValue(phi));
+        System.out.println(" \n ===> Optimal objective value "+model.getObjValue()+"\n");
         
     }
     
@@ -170,5 +171,32 @@ public class MasterProblem {
         model.end();
     }
 	
+    // Set Optimality Cuts (feasibility cuts are omitted as they are redundant in this case)
+    
+    public void addOptimalityCut(double[] demandConstraints, double[][] minProConstr, double[][] maxProConstr,
+    							 double[][] RampUpConstr, double[][] RampDownConstr) throws IloException {
+    	IloLinearNumExpr lhs = model.linearNumExpr();
+    	// adding constants
+    	double constant = 0;
+    	for (int t=1; t<=gcp.getT(); t++) {
+    		constant += gcp.getDemand()[t-1]* demandConstraints[t-1];
+    		for (int g=1; g<=gcp.getnGenerators(); g++) {
+    			constant += gcp.getRamping()[g-1]*RampDownConstr[g-1][t-1];
+    			constant += gcp.getRamping()[g-1]*RampUpConstr[g-1][t-1];
+    		}
+    	}
+    	lhs.setConstant(constant);
+    	// adding u-terms
+    	for(int t=1; t<=gcp.getT();t++) {
+    		for (int g=1; g<=gcp.getnGenerators();g++) {
+    			lhs.addTerm(minProConstr[g-1][t-1], u[g-1][t-1]);
+    			lhs.addTerm(maxProConstr[g-1][t-1], u[g-1][t-1]);
+    		}
+    	}
+    	lhs.addTerm(-1, phi);
+    	model.addLe(lhs, 0);    	
+    }
+    
+    
 	
 }
