@@ -174,7 +174,6 @@ public class DirectModel {
 	
 	
     public void solve() throws IloException{
-        model.setOut(null);
         model.solve();
         
         System.out.println(" \n ===> Optimal objective value "+model.getObjValue()+"\n");
