@@ -9,7 +9,6 @@ public class FeasibilityProblem {
 	
 	private GeneratorProblem gcp;
 	private IloCplex model; // this subproblem
-	private int[][] U;
 	private IloNumVar p[][]; //production
 	private IloNumVar l[]; //shedding
     private IloNumVar v1[][]; //positive slack
@@ -24,7 +23,6 @@ public class FeasibilityProblem {
 		//taking the problem and the first stage solution as input
 		// Initialising values
 		this.gcp = gcp;
-		this.U=U;
 		this.p = new IloNumVar[gcp.getnGenerators()][gcp.getT()];
 		this.l = new IloNumVar[gcp.getT()];
 		this.model = new IloCplex(); 
@@ -127,7 +125,7 @@ public class FeasibilityProblem {
      * Solves the subproblem
      */
     public void solve() throws IloException{
-        //model.setOut(null);
+        model.setOut(null);
         model.solve();
     }
     
@@ -139,12 +137,54 @@ public class FeasibilityProblem {
     }
     
     
-    /*  I just realised the feasibility problem is totally redundant as the second stage will never be infeasible     
-     *	as the second stage can always satisfy demand with the shedding variable l.
-     *	So I just wasted a bit of time implementing a feasiblity problem. 
-     *	The methods for returning the duals of the constraints would show bellow, but I have omitted to include them as 
-     *	they are redundant.  
-     */
+ // get duals Duals
+    public double[] getDualsDemandConstraints() throws IloException{
+        double duals[] = new double[gcp.getT()];
+        for(int t = 1; t <= gcp.getT(); t++){
+            duals[t-1] = model.getDual(demandConstraints[t-1]);
+        }
+        return duals;
+    }
+    
+    public double[][] getminProConstraints() throws IloException{
+    	double duals[][] = new double[gcp.getnGenerators()][gcp.getT()];
+    	for (int t=1; t<=gcp.getT(); t++) {
+    		for (int g=1; g<=gcp.getnGenerators(); g++) {
+    			duals[g-1][t-1] = model.getDual(minProConstr[g-1][t-1]);
+    		}
+    	}    	
+    	return duals;
+    }
+    
+    public double[][] getmaxProConstraints() throws IloException{
+    	double duals[][] = new double[gcp.getnGenerators()][gcp.getT()];
+    	for (int t=1; t<=gcp.getT(); t++) {
+    		for (int g=1; g<=gcp.getnGenerators(); g++) {
+    			duals[g-1][t-1] = model.getDual(maxProConstr[g-1][t-1]);
+    		}
+    	}    	
+    	return duals;
+    }
+    
+    public double[][] getRampUpConstraints() throws IloException{
+    	double duals[][] = new double[gcp.getnGenerators()][gcp.getT()];
+    	for (int t=1; t<=gcp.getT(); t++) {
+    		for (int g=1; g<=gcp.getnGenerators(); g++) {
+    			duals[g-1][t-1] = model.getDual(RampUpConstr[g-1][t-1]);
+    		}
+    	}    	
+    	return duals;
+    }
+    
+    public double[][] getRampDownConstraints() throws IloException{
+    	double duals[][] = new double[gcp.getnGenerators()][gcp.getT()];
+    	for (int t=1; t<=gcp.getT(); t++) {
+    		for (int g=1; g<=gcp.getnGenerators(); g++) {
+    			duals[g-1][t-1] = model.getDual(RampDownConstr[g-1][t-1]);
+    		}
+    	}    	
+    	return duals;
+    }
     
     
 }

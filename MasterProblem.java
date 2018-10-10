@@ -102,12 +102,6 @@ public class MasterProblem {
 		
 	}// Constructor
 	
-	// Feasibility Cuts are omitted as the shedding variable l will always make the second stage feasible. 
-	
-	//Generate Optimality Cuts
-	
-	
-	
 	
 	// Utility Methods
 	/**
@@ -148,13 +142,12 @@ public class MasterProblem {
     
 	
     public void print() throws IloException {
-    	System.out.println("Optimal solution ");
         
         System.out.println("\n=====Generator On Status===== ");
         for(int i = 1; i<= gcp.getnGenerators(); i++){
         	String str = ""; 
             for(int j = 1; j<=gcp.getT() ;j++){
-            	if (model.getValue(u[i-1][j-1]) != 0 ) {
+            	if (model.getValue(u[i-1][j-1]) > 0 ) {
             		str = str+gcp.getName()[i-1]+"_"+j+" = On  ";
             	}
             }
@@ -162,7 +155,7 @@ public class MasterProblem {
             	System.out.print("[ "+str+"] \n");
             }
         }
-        System.out.println("Production Cost Phi = "+model.getValue(phi));
+        //System.out.println("Production Cost Phi = "+model.getValue(phi));
         System.out.println(" \n ===> Optimal objective value "+model.getObjValue()+"\n");
         
     }
@@ -170,31 +163,64 @@ public class MasterProblem {
     public void end(){
         model.end();
     }
+    
+    public double getObjValue() throws IloException {
+    	return model.getObjValue();
+    }
 	
     // Set Optimality Cuts (feasibility cuts are omitted as they are redundant in this case)
-    
-    public void addOptimalityCut(double[] demandConstraints, double[][] minProConstr, double[][] maxProConstr,
-    							 double[][] RampUpConstr, double[][] RampDownConstr) throws IloException {
+    //  u^j(b-Gx) - phi <= 0
+    public void addOptimalityCut(double[] demandDuals, double[][] minProDuals, double[][] maxProDuals,
+    							 double[][] RampUpDuals, double[][] RampDownDuals) throws IloException {
     	IloLinearNumExpr lhs = model.linearNumExpr();
     	// adding constants
     	double constant = 0;
     	for (int t=1; t<=gcp.getT(); t++) {
-    		constant += gcp.getDemand()[t-1]* demandConstraints[t-1];
+    		constant += gcp.getDemand()[t-1]*demandDuals[t-1];
     		for (int g=1; g<=gcp.getnGenerators(); g++) {
-    			constant += gcp.getRamping()[g-1]*RampDownConstr[g-1][t-1];
-    			constant += gcp.getRamping()[g-1]*RampUpConstr[g-1][t-1];
+    			constant += gcp.getRamping()[g-1]*RampDownDuals[g-1][t-1];
+    			constant += gcp.getRamping()[g-1]*RampUpDuals[g-1][t-1];
     		}
     	}
     	lhs.setConstant(constant);
     	// adding u-terms
     	for(int t=1; t<=gcp.getT();t++) {
     		for (int g=1; g<=gcp.getnGenerators();g++) {
-    			lhs.addTerm(minProConstr[g-1][t-1], u[g-1][t-1]);
-    			lhs.addTerm(maxProConstr[g-1][t-1], u[g-1][t-1]);
+    			lhs.addTerm(minProDuals[g-1][t-1]*gcp.getMinP()[g-1], u[g-1][t-1]);
+    			lhs.addTerm(maxProDuals[g-1][t-1]*gcp.getMaxP()[g-1], u[g-1][t-1]);
     		}
     	}
     	lhs.addTerm(-1, phi);
-    	model.addLe(lhs, 0);    	
+    	//IloRange cut = 
+    			model.addLe(lhs, 0);
+        //System.out.println("Adding cut "+cut.toString());  	
+    }
+    
+ // Set Feasibility Cuts 
+    //  u^j(b-Gx) - phi <= 0
+    public void addFeasibilityCut(double[] demandDuals, double[][] minProDuals, double[][] maxProDuals,
+    							 double[][] RampUpDuals, double[][] RampDownDuals) throws IloException {
+    	IloLinearNumExpr lhs = model.linearNumExpr();
+    	// adding constants
+    	double constant = 0;
+    	for (int t=1; t<=gcp.getT(); t++) {
+    		constant += gcp.getDemand()[t-1]*demandDuals[t-1];
+    		for (int g=1; g<=gcp.getnGenerators(); g++) {
+    			constant += gcp.getRamping()[g-1]*RampDownDuals[g-1][t-1];
+    			constant += gcp.getRamping()[g-1]*RampUpDuals[g-1][t-1];
+    		}
+    	}
+    	lhs.setConstant(constant);
+    	// adding u-terms
+    	for(int t=1; t<=gcp.getT();t++) {
+    		for (int g=1; g<=gcp.getnGenerators();g++) {
+    			lhs.addTerm(minProDuals[g-1][t-1]*gcp.getMinP()[g-1], u[g-1][t-1]);
+    			lhs.addTerm(maxProDuals[g-1][t-1]*gcp.getMaxP()[g-1], u[g-1][t-1]);
+    		}
+    	}
+    	//IloRange cut = 
+    			model.addLe(lhs, 0);
+        //System.out.println("Adding cut "+cut.toString());    	
     }
     
     

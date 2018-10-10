@@ -185,7 +185,7 @@ public class DirectModel {
         System.out.println("\n=====Shedding===== ");
         System.out.print("[ ");
         for(int i = 1; i<=gcp.getT() ;i++){ 
-        	if(model.getValue(l[i-1]) != 0) {
+        	if(model.getValue(l[i-1]) > 0) {
         		System.out.print("l_"+i+" = "+model.getValue(l[i-1])+", ");
         	}
         } System.out.print("] \n");
@@ -207,7 +207,7 @@ public class DirectModel {
         for(int i = 1; i<= gcp.getnGenerators(); i++){
         	String str = "";
         	for(int j = 1; j<=gcp.getT() ;j++){
-        		if(model.getValue(p[i-1][j-1]) != 0) {
+        		if(model.getValue(p[i-1][j-1]) > 0) {
         			str = str+gcp.getName()[i-1]+"_"+j+" = "+model.getValue(p[i-1][j-1])+" ";
         		}     
         	}   

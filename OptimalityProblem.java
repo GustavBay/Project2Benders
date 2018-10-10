@@ -60,8 +60,7 @@ public class OptimalityProblem {
 			for (int g = 1; g <= gcp.getnGenerators(); g++) {
 				IloLinearNumExpr lhs = model.linearNumExpr();
 				lhs.addTerm(1, p[g-1][t-1]);
-				lhs.setConstant(-(gcp.getMinP()[g-1])* U[g-1][t-1]);
-				minProConstr[g-1][t-1] = model.addGe(lhs, 0);
+				minProConstr[g-1][t-1]=model.addGe(lhs, gcp.getMinP()[g-1]* U[g-1][t-1]);
 			}
 		}
 		
@@ -71,8 +70,7 @@ public class OptimalityProblem {
 			for (int g = 1; g <= gcp.getnGenerators(); g++) {
 				IloLinearNumExpr lhs = model.linearNumExpr();
 				lhs.addTerm(1, p[g-1][t-1]);
-				lhs.setConstant(-(gcp.getMaxP()[g-1])*U[g-1][t-1]);
-				maxProConstr[g-1][t-1] = model.addLe(lhs, 0);
+				maxProConstr[g-1][t-1]=model.addLe(lhs, gcp.getMaxP()[g-1]*U[g-1][t-1]);
 			}
 		}
 		
@@ -188,6 +186,30 @@ public class OptimalityProblem {
     		solution[t-1] = model.getValue(l[t-1]);
     	}
     	return solution;
+    }
+    
+    public void print() throws  IloException {
+    	System.out.println("// ========= Printing solution ===========");
+        
+        System.out.println("\n=====Shedding===== ");
+        System.out.print("[ ");
+        for(int i = 1; i<=gcp.getT() ;i++){ 
+        	if(model.getValue(l[i-1]) > 0) {
+        		System.out.print("l_"+i+" = "+model.getValue(l[i-1])+", ");
+        	}
+        } System.out.print("] \n");
+    	System.out.println("\n=====Generator Production===== ");
+        for(int i = 1; i<= gcp.getnGenerators(); i++){
+        	String str = "";
+        	for(int j = 1; j<=gcp.getT() ;j++){
+        		if(model.getValue(p[i-1][j-1]) > 0) {
+        			str = str+gcp.getName()[i-1]+"_"+j+" = "+model.getValue(p[i-1][j-1])+" ";
+        		}     
+        	}   
+        	if (str != "") {
+            	System.out.print("[ "+str+"] \n");
+            }
+        }
     }
     
     public void end() {

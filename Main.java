@@ -31,7 +31,6 @@ public class Main {
 		
 		// Want to perform a direct solve, without Benders?
 		System.out.println("Press Enter to continue or Enter 'y' if you want to calculate the optimal value with a generic direct model");
-		//char answer = (char) System.in.read();
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		
 		// Solving a direct implementation of the model, to verify correctness of the BD algorithm.
@@ -51,7 +50,6 @@ public class Main {
 			}
 		}		catch(Exception e) {}
 		
-		//char answer = 'y';
 		
 		
 		
@@ -61,29 +59,42 @@ public class Main {
 		// Bender's Decomposition
 		MasterProblem mp = new MasterProblem(gcp);
 		boolean solved = false;
+		int iter = 0;
 		while (!solved) {
 			mp.solve();
-			mp.print();
-			/* When constructing the Feasibility problem, I realised it's redundant 
-			 * as the shedding variable will make the second stage feasible always.
+						
 			FeasibilityProblem fsp = new FeasibilityProblem(gcp, mp.getU());
 			fsp.solve();
-			if(fsp.getObjValue()>0) {
-				//Introduce cut and jump to top of while-loop
-			}
-			*/
 			
+			//Checking Feasibility
+			if(fsp.getObjValue()>1e-6) {
+				// The second stage resulted infeasible, so we will add the feasibility cut
+				mp.addFeasibilityCut(fsp.getDualsDemandConstraints(), fsp.getminProConstraints(), 
+						fsp.getmaxProConstraints(), fsp.getRampUpConstraints(), fsp.getRampDownConstraints());
+			}
+			
+			else {	
 			// solve Optimality Subproblem checking for optimality 
 			OptimalityProblem osp = new OptimalityProblem(gcp, mp.getU());
 			osp.solve();
-			System.out.println("printin osp value: "+osp.getObjValue());
-			System.out.println("printin phi value: "+mp.getPhi());
-			if( mp.getPhi() >= osp.getObjValue() ) {
+			//System.out.println("printing osp value: "+osp.getObjValue());
+			//System.out.println("printing phi value: "+mp.getPhi());
+			if( mp.getPhi()+(1e-6) >= osp.getObjValue()) {
 				// If true, then we solved the problem!
-				System.out.println("The Bender's Decomposition has converged!");
+				System.out.println("// ======  The Bender's Decomposition has converged in "+iter+" iterations ========");
+				System.out.println(" ====> Optimal Value = "+mp.getObjValue()+"\n");
 				solved = true;
 				
-				mp.print();
+				System.out.println("Wanna print solution? Enter 'y' or enter to continue");
+				try {
+					char answer = br.readLine().charAt(0);
+					if (answer == 'y') {
+						osp.print();
+						mp.print();
+					}
+				} catch(Exception e) {}
+				
+								
 				mp.end();
 			}
 			else {
@@ -92,8 +103,10 @@ public class Main {
 						osp.getmaxProConstraints(), osp.getRampUpConstraints(), osp.getRampDownConstraints());
 			}
 			osp.end();
-		
+			}// if feasible
+			iter++;
 		}//while
+		
 		
 	}
 
