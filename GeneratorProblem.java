@@ -6,6 +6,7 @@ public class GeneratorProblem {
 	/**
 	 * A data-object for containing all the data related to a Generator Commitment Problem with simples getters. 
 	 * Values are final and defined at construction. 
+	 * The Constructor takes the input files and read them, setting up the problem object
 	 */
 	
 	

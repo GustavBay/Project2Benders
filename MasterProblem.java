@@ -16,6 +16,7 @@ public class MasterProblem {
 	private IloNumVar phi; 
 	
 	public MasterProblem(GeneratorProblem gcp) throws IloException {
+		// Initialising data
 		this.gcp = gcp;
 		this.model = new IloCplex();
 		this.c = new IloNumVar[gcp.getnGenerators()][gcp.getT()];

@@ -27,6 +27,8 @@ public class Main {
 					+ "Alternatively supply: Number of Generators, Demand File, Data Table, Number of Hours and shed cost");
 			
 		}
+		
+		// The constructor for the problem will take the input files and read them
 		GeneratorProblem gcp = new GeneratorProblem(G, LoadFile, GeneratorFile, T, shed);
 		
 		// Want to perform a direct solve, without Benders?
@@ -68,7 +70,7 @@ public class Main {
 			
 			//Checking Feasibility
 			if(fsp.getObjValue()>1e-6) {
-				// The second stage resulted infeasible, so we will add the feasibility cut
+				// The second stage resulted infeasible, so we will add the feasibility cut and return to top of loop
 				mp.addFeasibilityCut(fsp.getDualsDemandConstraints(), fsp.getminProConstraints(), 
 						fsp.getmaxProConstraints(), fsp.getRampUpConstraints(), fsp.getRampDownConstraints());
 			}
@@ -79,6 +81,7 @@ public class Main {
 			osp.solve();
 			//System.out.println("printing osp value: "+osp.getObjValue());
 			//System.out.println("printing phi value: "+mp.getPhi());
+			
 			if( mp.getPhi()+(1e-6) >= osp.getObjValue()) {
 				// If true, then we solved the problem!
 				System.out.println("// ======  The Bender's Decomposition has converged in "+iter+" iterations ========");
