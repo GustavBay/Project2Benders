@@ -19,7 +19,7 @@ public class FeasibilityProblem {
 	private IloRange[][] RampUpConstr;
 	private IloRange[][] RampDownConstr;
 
-	public FeasibilityProblem(GeneratorProblem gcp, int[][] U) throws IloException { 
+	public FeasibilityProblem(GeneratorProblem gcp, double[][] U) throws IloException { 
 		//taking the problem and the first stage solution as input
 		// Initialising values
 		this.gcp = gcp;
@@ -184,6 +184,31 @@ public class FeasibilityProblem {
     		}
     	}    	
     	return duals;
+    }
+    
+    
+    //Returning Constant and linear terms for the Extended BD feasibility cuts
+    public double getConstantTerm() throws IloException{
+    	double constant = 0;
+    	for (int t=1; t<=gcp.getT(); t++) {
+    		constant += gcp.getDemand()[t-1]*model.getDual(demandConstraints[t-1]);
+    		for (int g=1; g<=gcp.getnGenerators(); g++) {
+    			constant += gcp.getRamping()[g-1]*model.getDual(RampUpConstr[g-1][t-1]);
+    			constant += gcp.getRamping()[g-1]*model.getDual(RampDownConstr[g-1][t-1]);
+    		}
+    	}
+    	return constant;
+    }
+    
+    public IloLinearNumExpr getLinearTerm(IloNumVar u[][]) throws IloException{
+    	IloLinearNumExpr lhs = model.linearNumExpr();
+    	for(int t=1; t<=gcp.getT();t++) {
+    		for (int g=1; g<=gcp.getnGenerators();g++) {
+    			lhs.addTerm(model.getDual(minProConstr[g-1][t-1])*gcp.getMinP()[g-1], u[g-1][t-1]);
+    			lhs.addTerm(model.getDual(maxProConstr[g-1][t-1])*gcp.getMaxP()[g-1], u[g-1][t-1]);
+    		}
+    	}
+    	return lhs;
     }
     
     

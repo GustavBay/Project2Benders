@@ -17,7 +17,7 @@ public class OptimalityProblem {
 	private IloRange[][] RampUpConstr;
 	private IloRange[][] RampDownConstr;
 
-	public OptimalityProblem(GeneratorProblem generatorproblem, int[][] U) throws IloException {
+	public OptimalityProblem(GeneratorProblem generatorproblem, double[][] U) throws IloException {
 		// Initialising variables
 		this.gcp = generatorproblem;
 		this.p = new IloNumVar[gcp.getnGenerators()][gcp.getT()];
@@ -167,6 +167,32 @@ public class OptimalityProblem {
     	}    	
     	return duals;
     }
+    
+    
+    // Returning Constant and linear terms for the Extended BD optimality cuts
+    public double getConstantTerm() throws IloException{
+    	double constant = 0;
+    	for (int t=1; t<=gcp.getT(); t++) {
+    		constant += gcp.getDemand()[t-1]*model.getDual(demandConstraints[t-1]);
+    		for (int g=1; g<=gcp.getnGenerators(); g++) {
+    			constant += gcp.getRamping()[g-1]*model.getDual(RampUpConstr[g-1][t-1]);
+    			constant += gcp.getRamping()[g-1]*model.getDual(RampDownConstr[g-1][t-1]);
+    		}
+    	}
+    	return constant;
+    }
+    
+    public IloLinearNumExpr getLinearTerm(IloNumVar u[][]) throws IloException{
+    	IloLinearNumExpr lhs = model.linearNumExpr();
+    	for(int t=1; t<=gcp.getT();t++) {
+    		for (int g=1; g<=gcp.getnGenerators();g++) {
+    			lhs.addTerm(model.getDual(minProConstr[g-1][t-1])*gcp.getMinP()[g-1], u[g-1][t-1]);
+    			lhs.addTerm(model.getDual(maxProConstr[g-1][t-1])*gcp.getMaxP()[g-1], u[g-1][t-1]);
+    		}
+    	}
+    	return lhs;
+    }
+    
     
     
     // Get the solution for l and p

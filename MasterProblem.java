@@ -14,6 +14,8 @@ public class MasterProblem {
 	private IloNumVar c[][]; //startup cost
 	private IloNumVar u[][]; // on/off status
 	private IloNumVar phi; 
+	private double[]  L; 	// final shedding solution
+	private double[][] P; 	// final production solution
 	
 	public MasterProblem(GeneratorProblem gcp) throws IloException {
 		// Initialising data
@@ -117,8 +119,8 @@ public class MasterProblem {
 	/**
 	 * @return the solution from first stage problem; i.e. what generators are operational
 	 */
-	public int[][] getU() throws IloException{
-		int[][] U = new int[gcp.getnGenerators()][gcp.getT()];
+	public double[][] getU() throws IloException{
+		double[][] U = new double[gcp.getnGenerators()][gcp.getT()];
 		for (int t=1; t <= gcp.getT(); t++) {
 			for (int g = 1; g <= gcp.getnGenerators(); g++) {
 				U[g-1][t-1] = (int) model.getValue(u[g-1][t-1]);
@@ -224,6 +226,111 @@ public class MasterProblem {
         //System.out.println("Adding cut "+cut.toString());    	
     }
     
+    
+    // The following Methods are for an extended BD with cuts added to the local BB nodes which is recommended for large MIP/IP problems
+    
+    
+    public void solveBB() throws IloException{
+        model.setOut(null);
+        model.use(new Callback());
+        model.solve();
+    }
+    
+    
+    private class Callback extends IloCplex.LazyConstraintCallback{
+
+        public Callback() {
+        }
+
+        protected void main() throws IloException {
+        	// Get current solution at this node
+        	double[][] U = getU();
+        	double Phi = getPhi();
+        	
+        	FeasibilityProblem fsp = new FeasibilityProblem(gcp, U);
+			fsp.solve();
+			
+			//Checking Feasibility
+			if(fsp.getObjValue()>1e-7) {
+				
+				// We identified an infeasible solution so we will add the feasibility cut to the node
+				double constant = fsp.getConstantTerm();
+				IloLinearNumExpr lhs = fsp.getLinearTerm(u);
+		    	add(model.le(lhs, -constant));		    	
+			}
+			
+			else {	
+			// solve Optimality Subproblem checking for optimality 
+			OptimalityProblem osp = new OptimalityProblem(gcp, U);
+			osp.solve();
+			
+			if( Phi+1e-7 >= osp.getObjValue()) {
+				// The node is optimal! Hurrah!
+				
+				//Saving the optimal solution for printing
+				L = new double[gcp.getT()];
+				L = osp.getSolutionL();
+				P = new double[gcp.getnGenerators()][gcp.getT()];
+				P = osp.getSolutionP();
+			}
+			else {
+				// Solution is not optimal and we must introduce a cut with the duals from the Optimality subproblem
+				
+				IloLinearNumExpr lhs = osp.getLinearTerm(u);
+				lhs.addTerm(-1, phi);
+				double constant = osp.getConstantTerm();
+		    	
+		    	add(model.le(lhs,-constant));				
+				
+			}// if optimal			
+			}// if feasible
+        	
+        	
+        	
+        }// Main Callback
+        
+        // Methods for getting the Phi and U solution at this specific node.
+        public double getPhi() throws IloException {
+        	return getValue(phi);
+        }
+        public double[][] getU() throws IloException{
+        	double[][] U = new double[gcp.getnGenerators()][gcp.getT()];
+        	for(int t=1; t<=gcp.getT();t++) {
+        		for (int g=1; g<=gcp.getnGenerators();g++) {
+        			U[g-1][t-1] = getValue(u[g-1][t-1]);
+        		}
+        	}
+        	return U;
+        }
+        
+    
+    }
+    
+    // Method for printing the extended Bender's Decomposition, as we need to extract the second stage solution
+    public void printBB() throws IloException {
+    	System.out.println("// ========= Printing solution ===========");
+        
+        System.out.println("\n=====Shedding===== ");
+        System.out.print("[ ");
+        for(int i = 1; i<=gcp.getT() ;i++){ 
+        	if(L[i-1] > 0) {
+        		System.out.print("l_"+i+" = "+L[i-1]+", ");
+        	}
+        } System.out.print("] \n");
+    	System.out.println("\n=====Generator Production===== ");
+        for(int i = 1; i<= gcp.getnGenerators(); i++){
+        	String str = "";
+        	for(int j = 1; j<=gcp.getT() ;j++){
+        		if(P[i-1][j-1] > 0) {
+        			str = str+gcp.getName()[i-1]+"_"+j+" = "+P[i-1][j-1]+" ";
+        		}     
+        	}   
+        	if (str != "") {
+            	System.out.print("[ "+str+"] \n");
+            }
+        }
+    	print();
+    }
     
 	
 }

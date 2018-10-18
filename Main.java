@@ -60,6 +60,7 @@ public class Main {
 		
 		// Bender's Decomposition
 		MasterProblem mp = new MasterProblem(gcp);
+		long startTime = System.currentTimeMillis();
 		boolean solved = false;
 		int iter = 0;
 		while (!solved) {
@@ -69,7 +70,7 @@ public class Main {
 			fsp.solve();
 			
 			//Checking Feasibility
-			if(fsp.getObjValue()>1e-6) {
+			if(fsp.getObjValue()>1e-7) {
 				// The second stage resulted infeasible, so we will add the feasibility cut and return to top of loop
 				mp.addFeasibilityCut(fsp.getDualsDemandConstraints(), fsp.getminProConstraints(), 
 						fsp.getmaxProConstraints(), fsp.getRampUpConstraints(), fsp.getRampDownConstraints());
@@ -82,10 +83,14 @@ public class Main {
 			//System.out.println("printing osp value: "+osp.getObjValue());
 			//System.out.println("printing phi value: "+mp.getPhi());
 			
-			if( mp.getPhi()+(1e-6) >= osp.getObjValue()) {
+			if( mp.getPhi()+(1e-7) >= osp.getObjValue()) {
 				// If true, then we solved the problem!
+				long stopTime = System.currentTimeMillis();
+				double elapsedTime = (stopTime - startTime);
+				
 				System.out.println("// ======  The Bender's Decomposition has converged in "+iter+" iterations ========");
 				System.out.println(" ====> Optimal Value = "+mp.getObjValue()+"\n");
+				System.out.println("The Bender's Decomposition finished in "+elapsedTime/1000+" seconds");
 				solved = true;
 				
 				System.out.println("Wanna print solution? Enter 'y' or enter to continue");
@@ -111,6 +116,26 @@ public class Main {
 		}//while
 		
 		
-	}
+		// Now solving the same Problem adding cuts to the local nodes of the B&B tree, avoiding to resolve the entire MP every iteration
+		
+		System.out.println("======  Performing The Extended Bender's Decomposition ========");
+		MasterProblem mpBB = new MasterProblem(gcp);
+		long BBstartTime = System.currentTimeMillis();
+		mpBB.solveBB();
+		long BBstopTime = System.currentTimeMillis();
+		System.out.println("// ======  The Extended Bender's Decomposition has converged! ========");
+		System.out.println(" ====> Optimal Value = "+mpBB.getObjValue()+"\n");
+		//mpBB.print();
+		double BBelapsedTime = (BBstopTime - BBstartTime);
+	     System.out.println("The extended Bender's Decomposition finished in "+BBelapsedTime/1000+" seconds");
+	     System.out.println("Wanna print solution? Enter 'y' or enter to terminate");
+	     try {
+				char answer = br.readLine().charAt(0);
+				if (answer == 'y') {
+					mpBB.printBB();
+				}
+			} catch(Exception e) {}
+		mpBB.end();
+	}// Main
 
 }
